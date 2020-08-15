@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+
+//integrating sentry
+const Sentry = require('@sentry/node');
+
+Sentry.init({ dsn: 'https://2c6c325360a84946bb7cee2c469de628@o424251.ingest.sentry.io/5364466' });
+
+/**
+ * Module dependencies.
+ */
+
+const app = require("../server");
+const debug = require("debug")("temp");
+const http = require("http");
+const https = require("https");
+const fs = require("fs");
+
+/**
+ * Get ports from environment and store in Express
+ */
+
+const port = normalizePort(process.env.PORT || "3000");
+app.set("port", port);
+app.set("secPort", port + 443);
+
+/**
+ * Create HTTP server
+ */
+
+const server = http.createServer(app);
+
+/**
+ * Listen on provided port
+ */
+
+server.listen(app.get("port"), () => {
+    console.log("\nHTTP server up and running at port " + app.get("port"));
+});
+server.on("error", onError);
+server.on("listening", onListening);
+
+/**
+ * options for https server
+ */
+
+const options = {
+    key: fs.readFileSync(__dirname + "/private.key"),
+    cert: fs.readFileSync(__dirname + "/certificate.pem")
+};
+
+/**
+ * Create HTTPS server
+ */
+
+const secServer = https.createServer(options, app);
+
+/**
+ * Listen on provided port
+ */
+
+secServer.listen(app.get("secPort"), () => {
+    console.log("\nHTTPS server up and running at port " + app.get("secPort"));
+});
+secServer.on("error", onError);
+secServer.on("listening", onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+function normalizePort(val) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
+
+    if (port >= 0) {
+        // port number
+        return port;
+    }
+
+    return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event
+ */
+
+function onError(error) {
+    if (error.syscall != "listen")
+        throw error;
+
+    var bind = typeof port == "string"
+        ? "Pipe " + port
+        : "Port " + port;
+
+    //handle specific listen error with friendly messages
+    switch (error.code) {
+        case "EACCES":
+            console.error(bind + " requires elevated privileges");
+            process.exit(1);
+            break;
+        case "EADDRINUSE":
+            console.error(bind + " is already in use");
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
+
+/**
+ * Event listener for HTTP server "listening" event
+ */
+
+function onListening() {
+    var addr = server.address();
+    var bind = typeof addr == "string"
+        ? "pipe " + addr
+        : "port " + addr.port;
+    debug("Listening on " + bind);
+}
+
+// incase of error 
+//                 localhost didn’t send any data.
+//                 ERR_EMPTY_RESPONSE
+// explicitly type https://localhost:3000
